@@ -631,22 +631,23 @@ void Tuntap::do_read() {
 	ret = read(this->fd, this->read_buff, this->mtu + 4);
 	
 	if(ret <= 0) {
-		printf("PHAYL1\n");
+		//printf("PHAYL1\n");
+		return;
 	}
 	
 	if(this->ethtype_comp == TUNTAP_ETCOMP_NONE) {
-		ret_buff = node::Buffer::New(isolate, (const char*) this->read_buff, ret);
+		ret_buff = node::Buffer::Copy(isolate, (const char*) this->read_buff, ret).ToLocalChecked();
 	}
 	else if(this->ethtype_comp == TUNTAP_ETCOMP_HALF) {
-		ret_buff = node::Buffer::New(isolate, (const char*) this->read_buff + 2, ret - 2);
+		ret_buff = node::Buffer::Copy(isolate, (const char*) this->read_buff + 2, ret - 2).ToLocalChecked();
 	}
 	else if(this->ethtype_comp == TUNTAP_ETCOMP_FULL) {
 		uint8_t etval = EtherTypes::getId(be32toh(*(uint32_t*) this->read_buff));
 		this->read_buff[3] = etval;
-		ret_buff = node::Buffer::New(isolate, (const char*) this->read_buff + 3, ret - 3);
+		ret_buff = node::Buffer::Copy(isolate, (const char*) this->read_buff + 3, ret - 3).ToLocalChecked();
 	}
 	else {
-		ret_buff = node::Buffer::New(isolate, (const char*) this->read_buff, ret);
+		ret_buff = node::Buffer::Copy(isolate, (const char*) this->read_buff, ret).ToLocalChecked();
 	}
 	
 	const int argc = 1;
