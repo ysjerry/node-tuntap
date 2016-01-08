@@ -19,23 +19,68 @@ catch(e) {
 	process.exit(0);
 }
 
-var clinet_id="THIS_IS_RANDOM";
+var uuid = require('uuid');
+var clinet_id=uuid.v4();
 
 var net = require('net');
-var client = net.connect({port: 18881, host:"netsave.cn"},
-    function(v) { //'connect' listener
-  console.log('connected to server!' );
-  client.write(clinet_id);
-  var seq = 1;
-  client.on('data', function(data) {
-  		console.log(data.toString());
-  		//client.write("DATA FOR " + clinet_id  + " seq " + (seq++) );
-	});
-});
+var ports = [18881, 18882, 18883, 18884]
 
-client.on('end', function() {
-  console.log('disconnected from server');
-});
+for(var p in ports) {
+	console.log(ports[p])
+}
+
+var clients = {}
+
+for(var i in ports) {
+	var p = ports[i];
+
+	console.log(p);
+	try {
+		var client = clients[p]
+				 = net.connect({port: p, host: "p.savenet.cn"},
+				function (v) { //'connect' listener
+					console.log('connected to server!');
+					client.write(clinet_id);
+					var seq = 1;
+					client.on('data', function (data) {
+						console.log(data.toString());
+						client.write("DATA FOR " + clinet_id + " seq " + (seq++));
+					});
+					client.on('end', function () {
+						console.log('disconnected from server');
+						client.end();
+						delete clients[p];
+					});
+				});
+
+		console.log('before port server ' + client.port);
+		client.port = p;
+		console.log('after port server ' + client.port);
+
+		client.on("error", function (v) {
+			console.log('error from server ' + v);
+			//client.end();
+			delete clients[p];
+		})
+	}catch(e) {
+		delete clients[p];
+	}
+}
+//var client = net.connect({port: 18881, host:"p.savenet.cn"},
+//    function(v) { //'connect' listener
+//  console.log('connected to server!' );
+//  client.write(clinet_id);
+//  var seq = 1;
+//  client.on('data', function(data) {
+//  		console.log(data.toString());
+//  		client.write("DATA FOR " + clinet_id  + " seq " + (seq++) );
+//	});
+//	client.on('end', function() {
+//		console.log('disconnected from server');
+//	});
+//});
+
+
 
 var enc = new tuntap.muxer(1500);
 var dec = new tuntap.demuxer(1500);
