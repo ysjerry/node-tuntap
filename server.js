@@ -45,7 +45,6 @@ function clientCallback(c) { //'connection' listener
 		clients[this.client_id] || (clients[this.client_id] = []);
 		this.index = clients[this.client_id].length;
 		clients[this.client_id].push(this);
-		console.log("ACK Request from" + data.toString());
 		this.write("ACK REQ " + this.client_id);
 		this.removeAllListeners(["data"]);
 		this.on("data", function(data) {
@@ -96,13 +95,11 @@ function getIdleSocket() {
 }
 
 enc.on('data', function() {
-	console.log("enc length= ", arguments[0].length);
 
 	sock = getIdleSocket();
 
 	if(sock) {
 		sock.remainPackages++;
-		console.log("dec length= ", arguments[0].length);
 		sock.write(arguments[0], function() {
 			this.remainPackages--;
 		});

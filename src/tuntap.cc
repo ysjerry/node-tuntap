@@ -631,7 +631,7 @@ void Tuntap::do_read() {
 	ret = read(this->fd, this->read_buff, this->mtu + 4);
 	
 	if(ret <= 0) {
-		printf("PHAYL1\n");
+		//printf("PHAYL1\n");
 		return;
 	}
 	
