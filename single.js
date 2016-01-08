@@ -27,10 +27,6 @@ var net = require('net');
 var ports = [18881]
 //var ports = [18881, 18882, 18883, 18884]
 
-for(var p in ports) {
-    console.log(ports[p])
-}
-
 var clients = {}
 
 var enc = new tuntap.muxer(1410);
@@ -38,7 +34,6 @@ var enc = new tuntap.muxer(1410);
 for(var i in ports) {
     var p = ports[i];
 
-    console.log(p);
     try {
         clients[p]  = net.connect({port: p, host: "p.savenet.cn"},
             function () { //'connect' listener
@@ -46,14 +41,11 @@ for(var i in ports) {
                 this.write(clinet_id);
                 this.dec = new tuntap.demuxer(1410);
                 this.dec.on('data', function (data) {
-                    console.log("Dec Recv: ", data.length);
                     tt.write(data);
                 });
                 this.on('data', function (data) {
-                    console.log("ip alloc is: ", data.toString());
                     this.removeAllListeners(["data"]);
                     this.on('data', function (data) {
-                        console.log("Socket Recv: ", data.length);
                         this.dec.write(data);
                     });
                 });
@@ -97,18 +89,11 @@ function getIdleSocket() {
 
 }
 
-
-tt.on('data', function() {
-    console.log("tt buffer length= ", arguments[0].length);
-});
-
 enc.on('data', function() {
-    console.log("enc buffer length= ", arguments[0].length);
     sock = getIdleSocket();
 
     if(sock) {
         sock.remainPackages++;
-        console.log("Write to Socket = " + sock.port);
         sock.write(arguments[0], function() {
             this.remainPackages--;
         });
