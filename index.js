@@ -143,11 +143,11 @@ tuntap.demuxer = function(mtu, options) {
 	}
 	
 	this.mtu = mtu;
-	this.decBuffer = new Buffer(mtu + 2);
+	this.decBuffer = new Buffer(mtu + 10);
 	this.length = 0;
 	this.header = 0;
 	this.remain = 0;
-	
+	this.lastLengthLeft = -1;
 	stream.Transform.call(this, options);
 }
 
@@ -167,35 +167,39 @@ tuntap.muxer.prototype._transform = function(buffer, encoding, callback) {
 	callback();
 }
 
+
 tuntap.demuxer.prototype._transform = function(buffer, encoding, callback) {
 	if(!Buffer.isBuffer(buffer)) {
 		buffer = new Buffer(buffer, encoding);
 	}
+
+	if(buffer.length == 0) {
+		callback();
+		return;
+	}
 	
 	var cursor = 0;
 	var copy;
-	
-	while(buffer.length - cursor > 0) {
-		if(this.header < 2) {
-			if(buffer.length >= (2 - this.header))
-				copy = (2 - this.header);
-			else
-				copy = buffer.length;
-				
-			buffer.copy(this.decBuffer, this.header, cursor);
-			this.header += copy;
-			cursor += copy;
-			
-			if(this.header == 2)
-				this.length = this.remain = this.decBuffer.readUInt16LE(0);
-			
-			continue;
+
+	if(this.lastLengthLeft != -1) {
+		this.length = this.lastLengthLeft*0x100 + buffer.readUInt8(0);
+		this.lastLengthLeft = -1;
+		this.remain = this.length;
+		cursor++;
+	}
+
+	while(buffer.length - cursor > 1) {
+
+		if(this.length == 0) {
+			this.length = buffer.readUInt16LE(cursor);
+			cursor+=2;
+			this.remain = this.length;
 		}
-		
-		if(buffer.length >= this.remain)
+
+		if((buffer.length - cursor) >= this.remain)
 			copy = this.remain;
 		else
-			copy = buffer.length;
+			copy = (buffer.length - cursor);
 		
 		buffer.copy(this.decBuffer, this.length - this.remain, cursor, cursor + copy);
 		this.remain -= copy;
@@ -204,9 +208,14 @@ tuntap.demuxer.prototype._transform = function(buffer, encoding, callback) {
 		if(this.remain == 0) {
 			this.push(this.decBuffer.slice(0, this.length));
 			this.header = 0;
+			this.length = 0;
+			this.remain = 0;
 		}
 	}
-	
+
+	if(buffer.length - cursor == 1) {
+		this.lastLengthLeft = buffer.readUInt8(cursor);
+	}
 	callback();
 }
 
